@@ -19,10 +19,17 @@
 │   └── start.sh            # 生产环境启动脚本
 ├── src/
 │   ├── app/                # 页面路由与布局
-│   ├── components/ui/      # Shadcn UI 组件库
+│   │   ├── api/            # API 路由
+│   │   │   ├── tasks/      # 打卡任务 CRUD API
+│   │   │   └── checkin/    # 打卡记录 & 统计 API
+│   ├── components/
+│   │   ├── ui/             # Shadcn UI 组件库
+│   │   └── checkin/        # 打卡业务组件 (日历、任务列表、统计卡片、弹窗)
 │   ├── hooks/              # 自定义 Hooks
+│   │   └── use-checkin-data.ts  # 打卡数据管理 Hook
 │   ├── lib/                # 工具库
 │   │   └── utils.ts        # 通用工具函数 (cn)
+│   ├── storage/database/   # Supabase 数据库
 │   └── server.ts           # 自定义服务端入口
 ├── next.config.ts          # Next.js 配置
 ├── package.json            # 项目依赖管理
