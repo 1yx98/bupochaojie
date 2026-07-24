@@ -90,7 +90,7 @@ export default function CheckinPage() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
             </div>
-            <h1 className="text-lg font-bold">每日打卡</h1>
+            <h1 className="text-lg font-bold">赵展扬不要导管</h1>
           </div>
           <div className="text-sm text-muted-foreground">
             {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
