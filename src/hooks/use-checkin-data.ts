@@ -80,8 +80,8 @@ export function useCheckinData() {
   }, [selectedTaskId]);
 
   // 打卡/取消打卡
-  const toggleCheckin = useCallback(async (date: string) => {
-    if (!selectedTaskId) return;
+  const toggleCheckin = useCallback(async (date: string): Promise<'checked' | 'unchecked' | null> => {
+    if (!selectedTaskId) return null;
     try {
       const res = await fetch('/api/checkin', {
         method: 'POST',
@@ -92,9 +92,12 @@ export function useCheckinData() {
       if (json.success) {
         await fetchRecords();
         await fetchStats();
+        return json.action as 'checked' | 'unchecked';
       }
+      return null;
     } catch (err) {
       console.error('打卡失败:', err);
+      return null;
     }
   }, [selectedTaskId, fetchRecords, fetchStats]);
 

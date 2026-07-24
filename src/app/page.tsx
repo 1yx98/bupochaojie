@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useCheckinData } from '@/hooks/use-checkin-data';
 import { Calendar } from '@/components/checkin/calendar';
 import { TaskList } from '@/components/checkin/task-list';
@@ -34,8 +34,24 @@ export default function CheckinPage() {
     description: string;
   } | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [showCongrats, setShowCongrats] = useState(false);
 
   const checkedDates = records.map(r => r.checkin_date);
+
+  const handleCheckin = async (date: string) => {
+    const action = await toggleCheckin(date);
+    if (action === 'checked') {
+      setShowCongrats(true);
+    }
+  };
+
+  // 自动关闭恭喜弹窗
+  useEffect(() => {
+    if (showCongrats) {
+      const timer = setTimeout(() => setShowCongrats(false), 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showCongrats]);
 
   const handleAddTask = () => {
     setEditingTask(null);
@@ -90,7 +106,7 @@ export default function CheckinPage() {
             <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
             </div>
-            <h1 className="text-lg font-bold">赵展扬不要导管</h1>
+            <h1 className="text-lg font-bold">赵展扬不要导管小程序</h1>
           </div>
           <div className="text-sm text-muted-foreground">
             {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
@@ -117,7 +133,7 @@ export default function CheckinPage() {
             {/* 今日打卡按钮 */}
             <section className="bg-card rounded-2xl border border-border/50 p-4">
               <button
-                onClick={() => toggleCheckin(todayStr)}
+                onClick={() => handleCheckin(todayStr)}
                 className={cn(
                   'w-full py-4 rounded-xl flex items-center justify-center gap-3 font-medium text-lg transition-all active:scale-[0.98]',
                   isCheckedToday
@@ -150,7 +166,7 @@ export default function CheckinPage() {
                 currentMonth={currentMonth}
                 checkedDates={checkedDates}
                 taskColor={selectedTask.color}
-                onDateClick={toggleCheckin}
+                onDateClick={handleCheckin}
                 onMonthChange={changeMonth}
               />
             </section>
@@ -196,6 +212,17 @@ export default function CheckinPage() {
                 确认删除
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 打卡成功恭喜弹窗 */}
+      {showCongrats && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-card rounded-2xl border border-border p-8 mx-4 max-w-sm w-full text-center space-y-3 animate-in zoom-in-95 duration-300">
+            <div className="text-5xl">🎉</div>
+            <h3 className="text-xl font-bold text-primary">恭喜你赵展扬你不是废物</h3>
+            <p className="text-sm text-muted-foreground">继续保持，明天也要加油哦！</p>
           </div>
         </div>
       )}
