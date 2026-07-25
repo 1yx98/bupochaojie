@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-// GET /api/checkin/stats?task_id=xxx - 获取某任务的统计信息
-export async function GET(request: NextRequest) {
+// GET /api/checkin/stats - 获取统计信息
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-    const taskId = searchParams.get('task_id');
-
-    if (!taskId) {
-      return NextResponse.json({ success: false, error: '缺少 task_id 参数' }, { status: 400 });
-    }
-
     const client = getSupabaseClient();
 
     // 获取所有打卡记录
     const { data: records, error } = await client
       .from('checkin_records')
-      .select('checkin_date')
-      .eq('task_id', taskId)
+      .select('checkin_date, period')
       .order('checkin_date', { ascending: true });
     if (error) throw new Error(`查询失败: ${error.message}`);
 
@@ -25,17 +17,32 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         success: true,
         data: {
+          total_checkins: 0,
           total_days: 0,
           current_streak: 0,
           longest_streak: 0,
+          perfect_days: 0,
         },
       });
     }
 
-    const dates = records.map((r: { checkin_date: string }) => r.checkin_date).sort();
+    // 按日期分组
+    const dateMap = new Map<string, Set<string>>();
+    for (const r of records) {
+      if (!dateMap.has(r.checkin_date)) {
+        dateMap.set(r.checkin_date, new Set());
+      }
+      dateMap.get(r.checkin_date)!.add(r.period);
+    }
+
+    const dates = Array.from(dateMap.keys()).sort();
+    const totalCheckins = records.length;
     const totalDays = dates.length;
 
-    // 计算当前连续打卡天数
+    // 完美天数（一天三次全打）
+    const perfectDays = dates.filter(d => dateMap.get(d)!.size >= 3).length;
+
+    // 连续天数（按天算，至少打一次卡就算当天有效）
     const today = new Date();
     const todayStr = today.toISOString().split('T')[0];
     const yesterday = new Date(today);
@@ -45,7 +52,6 @@ export async function GET(request: NextRequest) {
     let currentStreak = 0;
     const lastDate = dates[dates.length - 1];
 
-    // 只有今天或昨天打卡了才有当前连续
     if (lastDate === todayStr || lastDate === yesterdayStr) {
       currentStreak = 1;
       let checkDate = new Date(lastDate);
@@ -60,7 +66,7 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // 计算最长连续打卡天数
+    // 最长连续
     let longestStreak = 1;
     let tempStreak = 1;
     for (let i = 1; i < dates.length; i++) {
@@ -78,9 +84,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: {
+        total_checkins: totalCheckins,
         total_days: totalDays,
         current_streak: currentStreak,
         longest_streak: longestStreak,
+        perfect_days: perfectDays,
       },
     });
   } catch (err) {

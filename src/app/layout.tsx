@@ -3,8 +3,8 @@ import { Inspector } from 'react-dev-inspector';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: '赵展扬不要导管小程序',
-  description: '赵展扬不要导管小程序 - 每日打卡',
+  title: '不要破戒',
+  description: '每日三打卡，坚持就是胜利',
 };
 
 export default function RootLayout({

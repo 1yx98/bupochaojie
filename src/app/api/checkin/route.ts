@@ -1,23 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseClient } from '@/storage/database/supabase-client';
 
-// GET /api/checkin?task_id=xxx&month=2025-07 - 获取打卡记录
+// GET /api/checkin?month=YYYY-MM - 获取某月打卡记录
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const taskId = searchParams.get('task_id');
-    const month = searchParams.get('month'); // format: YYYY-MM
-
-    if (!taskId) {
-      return NextResponse.json({ success: false, error: '缺少 task_id 参数' }, { status: 400 });
-    }
+    const month = searchParams.get('month');
 
     const client = getSupabaseClient();
     let query = client
       .from('checkin_records')
-      .select('id, task_id, checkin_date, created_at')
-      .eq('task_id', taskId)
-      .order('checkin_date', { ascending: false });
+      .select('id, checkin_date, period, created_at')
+      .order('checkin_date', { ascending: false })
+      .order('period', { ascending: true });
 
     if (month) {
       const startDate = `${month}-01`;
@@ -36,24 +31,32 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/checkin - 打卡（toggle 模式：已打卡则取消，未打卡则打卡）
+// POST /api/checkin - 打卡（传入 period: morning/noon/evening）
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { task_id, checkin_date } = body;
+    const { period } = body;
 
-    if (!task_id || !checkin_date) {
-      return NextResponse.json({ success: false, error: '缺少 task_id 或 checkin_date 参数' }, { status: 400 });
+    const validPeriods = ['morning', 'noon', 'evening'];
+    if (!period || !validPeriods.includes(period)) {
+      return NextResponse.json(
+        { success: false, error: '无效的时段，可选: morning, noon, evening' },
+        { status: 400 }
+      );
     }
+
+    // 使用当前日期
+    const today = new Date();
+    const checkinDate = today.toISOString().split('T')[0];
 
     const client = getSupabaseClient();
 
-    // 检查当天是否已打卡
+    // 检查是否已打卡
     const { data: existing, error: checkError } = await client
       .from('checkin_records')
       .select('id')
-      .eq('task_id', task_id)
-      .eq('checkin_date', checkin_date)
+      .eq('checkin_date', checkinDate)
+      .eq('period', period)
       .maybeSingle();
     if (checkError) throw new Error(`查询失败: ${checkError.message}`);
 
@@ -69,8 +72,8 @@ export async function POST(request: NextRequest) {
       // 打卡
       const { data, error: insError } = await client
         .from('checkin_records')
-        .insert({ task_id, checkin_date })
-        .select('id, task_id, checkin_date, created_at')
+        .insert({ checkin_date: checkinDate, period })
+        .select('id, checkin_date, period, created_at')
         .single();
       if (insError) throw new Error(`打卡失败: ${insError.message}`);
       return NextResponse.json({ success: true, action: 'checked', data });

@@ -3,43 +3,33 @@
 import { useState, useEffect } from 'react';
 import { useCheckinData } from '@/hooks/use-checkin-data';
 import { Calendar } from '@/components/checkin/calendar';
-import { TaskList } from '@/components/checkin/task-list';
 import { StatsCards } from '@/components/checkin/stats-cards';
-import { TaskDialog } from '@/components/checkin/task-dialog';
-import { cn } from '@/lib/utils';
+import { PeriodCard } from '@/components/checkin/period-card';
+
+// 获取当前时段
+function getCurrentPeriod(): 'morning' | 'noon' | 'evening' {
+  const hour = new Date().getHours();
+  if (hour >= 5 && hour < 12) return 'morning';
+  if (hour >= 12 && hour < 18) return 'noon';
+  return 'evening';
+}
 
 export default function CheckinPage() {
   const {
-    tasks,
-    selectedTask,
-    selectedTaskId,
-    setSelectedTaskId,
     records,
     stats,
     currentMonth,
     loading,
+    todayPeriods,
     toggleCheckin,
-    createTask,
-    updateTask,
-    deleteTask,
     changeMonth,
   } = useCheckinData();
 
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingTask, setEditingTask] = useState<{
-    id: string;
-    name: string;
-    icon: string;
-    color: string;
-    description: string;
-  } | null>(null);
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showCongrats, setShowCongrats] = useState(false);
+  const currentPeriod = getCurrentPeriod();
 
-  const checkedDates = records.map(r => r.checkin_date);
-
-  const handleCheckin = async (date: string) => {
-    const action = await toggleCheckin(date);
+  const handleCheckin = async (period: string) => {
+    const action = await toggleCheckin(period);
     if (action === 'checked') {
       setShowCongrats(true);
     }
@@ -53,176 +43,103 @@ export default function CheckinPage() {
     }
   }, [showCongrats]);
 
-  const handleAddTask = () => {
-    setEditingTask(null);
-    setDialogOpen(true);
-  };
-
-  const handleEditTask = (task: { id: string; name: string; icon: string; color: string; description: string | null }) => {
-    setEditingTask({ ...task, description: task.description || '' });
-    setDialogOpen(true);
-  };
-
-  const handleDeleteTask = (id: string) => {
-    setDeleteConfirm(id);
-  };
-
-  const confirmDelete = async () => {
-    if (deleteConfirm) {
-      await deleteTask(deleteConfirm);
-      setDeleteConfirm(null);
-    }
-  };
-
-  const handleDialogSubmit = async (data: { name: string; icon: string; color: string; description: string }) => {
-    if (editingTask) {
-      await updateTask(editingTask.id, data);
-    } else {
-      await createTask(data);
-    }
-  };
-
-  // 今日日期
-  const todayStr = new Date().toISOString().split('T')[0];
-  const isCheckedToday = checkedDates.includes(todayStr);
+  // 今日完成数
+  const todayCount = [todayPeriods.morning, todayPeriods.noon, todayPeriods.evening].filter(Boolean).length;
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-slate-900 via-purple-950 to-slate-900">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm text-muted-foreground">加载中...</p>
+          <div className="w-8 h-8 border-3 border-amber-400 border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-white/50">加载中...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* 顶部栏 */}
-      <header className="sticky top-0 z-10 bg-background/80 backdrop-blur-md border-b border-border/50">
-        <div className="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
-            </div>
-            <h1 className="text-lg font-bold">赵展扬不要导管小程序</h1>
-          </div>
-          <div className="text-sm text-muted-foreground">
-            {new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'short' })}
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-950 to-slate-900 text-white">
+      {/* 顶部标题 */}
+      <header className="pt-8 pb-4 px-4 text-center">
+        <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent">
+          不要破戒
+        </h1>
+        <p className="text-white/40 text-sm mt-1">每日三打卡，坚持就是胜利</p>
       </header>
 
-      <main className="max-w-lg mx-auto px-4 py-4 space-y-4 pb-20">
-        {/* 任务列表 */}
-        <section className="bg-card rounded-2xl border border-border/50 p-4">
-          <TaskList
-            tasks={tasks}
-            selectedTaskId={selectedTaskId}
-            onSelect={setSelectedTaskId}
-            onAdd={handleAddTask}
-            onEdit={handleEditTask}
-            onDelete={handleDeleteTask}
-          />
+      <main className="max-w-lg mx-auto px-4 pb-20 space-y-4">
+        {/* 今日进度 */}
+        <section className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm text-white/60">今日进度</span>
+            <span className="text-sm font-bold text-amber-300">{todayCount}/3</span>
+          </div>
+          {/* 进度条 */}
+          <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden mb-4">
+            <div
+              className="h-full bg-gradient-to-r from-amber-400 to-yellow-300 rounded-full transition-all duration-500"
+              style={{ width: `${(todayCount / 3) * 100}%` }}
+            />
+          </div>
+
+          {/* 早中晚打卡卡片 */}
+          <div className="flex gap-2">
+            <PeriodCard
+              period="morning"
+              label="早上"
+              timeRange="5:00-12:00"
+              icon="🌅"
+              isChecked={todayPeriods.morning}
+              isCurrent={currentPeriod === 'morning'}
+              onCheckin={() => handleCheckin('morning')}
+            />
+            <PeriodCard
+              period="noon"
+              label="中午"
+              timeRange="12:00-18:00"
+              icon="☀️"
+              isChecked={todayPeriods.noon}
+              isCurrent={currentPeriod === 'noon'}
+              onCheckin={() => handleCheckin('noon')}
+            />
+            <PeriodCard
+              period="evening"
+              label="晚上"
+              timeRange="18:00-5:00"
+              icon="🌙"
+              isChecked={todayPeriods.evening}
+              isCurrent={currentPeriod === 'evening'}
+              onCheckin={() => handleCheckin('evening')}
+            />
+          </div>
         </section>
 
-        {/* 选中任务的内容 */}
-        {selectedTask ? (
-          <>
-            {/* 今日打卡按钮 */}
-            <section className="bg-card rounded-2xl border border-border/50 p-4">
-              <button
-                onClick={() => handleCheckin(todayStr)}
-                className={cn(
-                  'w-full py-4 rounded-xl flex items-center justify-center gap-3 font-medium text-lg transition-all active:scale-[0.98]',
-                  isCheckedToday
-                    ? 'bg-accent text-accent-foreground'
-                    : 'text-white shadow-lg hover:shadow-xl'
-                )}
-                style={!isCheckedToday ? { backgroundColor: selectedTask.color } : undefined}
-              >
-                <span className="text-2xl">{selectedTask.icon}</span>
-                {isCheckedToday ? (
-                  <span>今日已打卡 ✓</span>
-                ) : (
-                  <span>立即打卡</span>
-                )}
-              </button>
-            </section>
+        {/* 统计 */}
+        <section className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-4">
+          <h3 className="text-sm text-white/60 mb-2">数据统计</h3>
+          <StatsCards stats={stats} />
+        </section>
 
-            {/* 统计卡片 */}
-            <section className="bg-card rounded-2xl border border-border/50 p-4">
-              <StatsCards
-                stats={stats}
-                taskIcon={selectedTask.icon}
-                taskColor={selectedTask.color}
-              />
-            </section>
-
-            {/* 日历 */}
-            <section className="bg-card rounded-2xl border border-border/50 p-4">
-              <Calendar
-                currentMonth={currentMonth}
-                checkedDates={checkedDates}
-                taskColor={selectedTask.color}
-                onDateClick={handleCheckin}
-                onMonthChange={changeMonth}
-              />
-            </section>
-          </>
-        ) : (
-          !loading && tasks.length > 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <p className="text-4xl mb-3">👆</p>
-              <p>选择一个任务开始打卡</p>
-            </div>
-          )
-        )}
+        {/* 日历 */}
+        <section className="bg-white/5 backdrop-blur-sm rounded-2xl border border-white/10 p-4">
+          <Calendar
+            currentMonth={currentMonth}
+            records={records}
+            onMonthChange={changeMonth}
+          />
+        </section>
       </main>
-
-      {/* 任务编辑/创建弹窗 */}
-      <TaskDialog
-        open={dialogOpen}
-        onOpenChange={setDialogOpen}
-        onSubmit={handleDialogSubmit}
-        initialData={editingTask}
-        title={editingTask ? '编辑习惯' : '新建习惯'}
-      />
-
-      {/* 删除确认弹窗 */}
-      {deleteConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-          <div className="bg-card rounded-2xl border border-border p-6 mx-4 max-w-sm w-full space-y-4">
-            <h3 className="text-lg font-semibold">确认删除</h3>
-            <p className="text-sm text-muted-foreground">
-              删除后，该习惯的所有打卡记录也会被清除，此操作不可撤销。
-            </p>
-            <div className="flex gap-3 justify-end">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="px-4 py-2 rounded-lg text-sm font-medium hover:bg-accent transition-colors"
-              >
-                取消
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-destructive text-destructive-foreground hover:bg-destructive/90 transition-colors"
-              >
-                确认删除
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 打卡成功恭喜弹窗 */}
       {showCongrats && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-card rounded-2xl border border-border p-8 mx-4 max-w-sm w-full text-center space-y-3 animate-in zoom-in-95 duration-300">
-            <div className="text-5xl">🎉</div>
-            <h3 className="text-xl font-bold text-primary">恭喜你赵展扬你不是废物</h3>
-            <p className="text-sm text-muted-foreground">继续保持，明天也要加油哦！</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-gradient-to-b from-purple-900 to-slate-900 rounded-3xl border border-amber-400/30 p-8 mx-4 max-w-sm w-full text-center space-y-4 shadow-2xl shadow-amber-400/10">
+            <div className="text-6xl animate-bounce">🎉</div>
+            <h3 className="text-2xl font-black bg-gradient-to-r from-amber-300 to-yellow-200 bg-clip-text text-transparent">
+              好棒呀
+            </h3>
+            <p className="text-xl font-bold text-white">你不是废物!</p>
+            <p className="text-sm text-white/40">继续保持，坚持就是胜利</p>
           </div>
         </div>
       )}

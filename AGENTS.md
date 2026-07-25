@@ -20,11 +20,10 @@
 ├── src/
 │   ├── app/                # 页面路由与布局
 │   │   ├── api/            # API 路由
-│   │   │   ├── tasks/      # 打卡任务 CRUD API
-│   │   │   └── checkin/    # 打卡记录 & 统计 API
+│   │   │   └── checkin/    # 打卡记录 & 统计 API (早中晚三时段)
 │   ├── components/
 │   │   ├── ui/             # Shadcn UI 组件库
-│   │   └── checkin/        # 打卡业务组件 (日历、任务列表、统计卡片、弹窗)
+│   │   └── checkin/        # 打卡业务组件 (日历、时段卡片、统计)
 │   ├── hooks/              # 自定义 Hooks
 │   │   └── use-checkin-data.ts  # 打卡数据管理 Hook
 │   ├── lib/                # 工具库
