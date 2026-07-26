@@ -58,7 +58,17 @@ export default function CheckinPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-purple-950 to-slate-900 text-white">
+    <div className="min-h-screen text-white relative">
+      {/* 背景壁纸 */}
+      <div
+        className="fixed inset-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: 'url(/wallpaper.jpg)' }}
+      />
+      {/* 遮罩层，让内容可读 */}
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+
+      {/* 内容层 */}
+      <div className="relative z-10">
       {/* 顶部标题 */}
       <header className="pt-8 pb-4 px-4 text-center">
         <h1 className="text-3xl font-black tracking-tight bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 bg-clip-text text-transparent">
@@ -143,6 +153,7 @@ export default function CheckinPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
